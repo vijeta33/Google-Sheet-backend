@@ -1,28 +1,40 @@
 const express = require('express');
-var bodyParser = require('body-parser');
-
-const route = require('./routes/route.js');
+const { google } = require('googleapis')
+const credentials = require('./credentials.json')
+const JWT = require('jsonwebtoken');
+const { sheets } = require('googleapis/build/src/apis/sheets');
+const SheetData = require('./sheetData.json')
 
 const app = express();
+app.use(express.urlencoded({ extended: true }))
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const auth = new google.auth.JWT(
+    credentials.client_email, null, credentials.private_key,
+    ['https://www.googleapis.com/auth/spreadsheets'],
+    null
+)
+
+auth.authorize((err, tokens) => {
+    if (err) {
+        console.log(err)
+    } else {
+        console.log('connected')
+        googlesheet(auth)
+    }
+})
+
+async function googlesheet(auth) {
+
+    const googlesheetsapi = google.sheets({ version: 'v4', auth: auth })
+
+    const opt = {
+        spreadsheetId: '1RYp4aTsHVitwxXawrlWUljYhnaxUIc6OlJ46yDkXfs0',
+        range: 'DataSheet!all'
+    }
+
+    let data = await googlesheetsapi.spreadsheets.values.get(opt)
+    let dataArray = data.data.values
+    console.log(dataArray)
 
 
-
-
-
-
-
-const mongoose = require('mongoose');
-const { response } = require('express');
-
-mongoose.connect("mongodb+srv://monty-python:SnYUEY4giV9rekw@functionup-backend-coho.0zpfv.mongodb.net/vijetahiwarkar_db?retryWrites=true&w=majority")
-    .then(() => console.log('mongodb running on 27017'))
-    .catch(err => console.log(err))
-
-app.use('/', route);
-
-app.listen(process.env.PORT || 3000, function () {
-    console.log('Express app running on port ' + (process.env.PORT || 3000))
-});
+}
